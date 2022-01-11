@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\LoyaltyPointsController;
+use App\Http\Controllers\LoyaltyPointsTransactionController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -15,22 +16,33 @@ use Illuminate\Support\Facades\Route;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
-Route::post('user/register', [UserController::class, 'register']);
-Route::post('user/login', [UserController::class, 'login']);
+
+Route::group(['prefix' => 'user'], function () {
+    Route::post('register', [UserController::class, 'register']);
+    Route::post('login', [UserController::class, 'login']);
+    Route::post('logout', [UserController::class, 'logout'])->middleware('auth:sanctum');
+});
 
 Route::group(['middleware' => ['auth:sanctum']], function () {
-    Route::post('user/logout', [UserController::class, 'logout']);
+    Route::group(['prefix' => 'account', 'middleware' => 'accountParamsIsValid'], function () {
+        Route::post('create', [AccountController::class, 'create'])
+            ->withoutMiddleware('accountParamsIsValid');
+        Route::post('activate/{type}/{id}', [AccountController::class, 'activate']);
+        Route::post('deactivate/{type}/{id}', [AccountController::class, 'deactivate']);
+        Route::get('balance/{type}/{id}', [AccountController::class, 'balance']);
+    });
 
-    // account management
-    Route::post('account/create', [AccountController::class, 'create']);
-    Route::post('account/activate/{type}/{id}', [AccountController::class, 'activate']);
-    Route::post('account/deactivate/{type}/{id}', [AccountController::class, 'deactivate']);
-    Route::get('account/balance/{type}/{id}', [AccountController::class, 'balance']);
+    Route::group(['prefix' => 'loyaltyPoints'], function () {
+        Route::post('deposit', [LoyaltyPointsController::class, 'deposit']);
+        Route::post('cancel', [LoyaltyPointsController::class, 'cancel']);
+        Route::post('withdraw', [LoyaltyPointsController::class, 'withdraw']);
+    });
 
-    // loyalty points management
-    Route::post('loyaltyPoints/deposit', [LoyaltyPointsController::class, 'deposit']);
-    Route::post('loyaltyPoints/withdraw', [LoyaltyPointsController::class, 'withdraw']);
-    Route::post('loyaltyPoints/cancel', [LoyaltyPointsController::class, 'cancel']);
+    Route::group(['prefix' => 'loyaltyPoints/v2'], function () {
+        Route::post('deposit', [LoyaltyPointsTransactionController::class, 'deposit']);
+        Route::post('cancel', [LoyaltyPointsTransactionController::class, 'cancel']);
+        Route::post('withdraw', [LoyaltyPointsTransactionController::class, 'withdraw']);
+    });
 });
 
 
